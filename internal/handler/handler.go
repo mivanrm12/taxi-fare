@@ -51,6 +51,7 @@ func (h Handler) HandleFunc() {
 	fareInput, err := h.validationService.ValidateInput(inputs)
 	if err != nil {
 		logrus.Error(err)
+		return
 	}
 
 	//calculate fare
