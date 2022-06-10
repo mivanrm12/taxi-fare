@@ -1,0 +1,7 @@
+fare:
+ base_distance_threshold: 1000
+ high_distance_threshold: 10000
+ base_fare: 400
+ standart_rate: 40
+ medium_distance_rate: 400
+ high_distance_rate: 350
