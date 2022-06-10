@@ -15,12 +15,11 @@ func New(cfg config.FareConfig) FareMeter {
 	}
 }
 
-func (fm FareMeter) CalculateTotalFare(input model.FareInput) (model.FareOutput, error) {
+func (fm FareMeter) CalculateTotalFare(input model.FareInput) model.FareOutput {
 	if input.GetDistance() < float64(fm.fareCfg.BaseDistanceThreshold) {
-
 		return model.FareOutput{
 			Total: fm.fareCfg.BaseFare,
-		}, nil
+		}
 	}
 	total := fm.fareCfg.BaseFare + int64((input.Distance-float64(fm.fareCfg.BaseDistanceThreshold))/float64(fm.fareCfg.MediumDistanceRate))*fm.fareCfg.StandartRate
 
@@ -29,6 +28,6 @@ func (fm FareMeter) CalculateTotalFare(input model.FareInput) (model.FareOutput,
 	}
 	return model.FareOutput{
 		Total: total,
-	}, nil
+	}
 
 }

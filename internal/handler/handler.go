@@ -10,12 +10,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+//go:generate mockgen -package=handler -source=handler.go -destination=handler_mock_test.go
 type validationService interface {
 	ValidateInput([]string) ([]model.FareInput, error)
 }
 
 type fareService interface {
-	CalculateTotalFare(input model.FareInput) (model.FareOutput, error)
+	CalculateTotalFare(input model.FareInput) model.FareOutput
 }
 type Handler struct {
 	validationService validationService
@@ -54,12 +55,7 @@ func (h Handler) HandleFunc() {
 
 	//calculate fare
 	for _, input := range fareInput {
-
-		currentFare, err = h.fareService.CalculateTotalFare(input)
-		if err != nil {
-			logrus.Error(err)
-		}
-
+		currentFare = h.fareService.CalculateTotalFare(input)
 	}
 	fmt.Println(currentFare.Total)
 

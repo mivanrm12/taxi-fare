@@ -2,6 +2,7 @@ package validation
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -23,23 +24,23 @@ func (v Validator) ValidateInput(inputs []string) ([]model.FareInput, error) {
 	fareInputs := []model.FareInput{}
 	if len(inputs) < 2 {
 		logrus.Warn("Input length <=2")
-		return fareInputs, errors.New("input length must be 2 or more line")
+		return []model.FareInput{}, errors.New("input length must be 2 or more line")
 	}
 	for i, input := range inputs {
 		splittedInput := strings.Split(input, " ")
 		if len(splittedInput) != 2 {
-			logrus.Info("invalid input: %s, row: %d", input, i)
-			return fareInputs, errors.New("input length must be formatted as \"timestamp distance\"")
+			logrus.Info(fmt.Sprintf("invalid input: %s, row: %d", input, i))
+			return []model.FareInput{}, errors.New("input length must be formatted as \"timestamp distance\"")
 		}
 		timestamp, valid := validateTimestamp(splittedInput[0])
 		if !valid {
-			logrus.Info("invalid input: %s, row: %d", input, i)
-			return fareInputs, errors.New("failed to parse timestamp input")
+			logrus.Info(fmt.Sprintf("invalid input: %s, row: %d", input, i))
+			return []model.FareInput{}, errors.New("failed to parse timestamp input")
 		}
 		distance, valid := validateDistance(splittedInput[1])
 		if !valid {
-			logrus.Info("invalid input: %s, row: %d", input, i)
-			return fareInputs, errors.New("failed to parse distance input")
+			logrus.Info(fmt.Sprintf("invalid input: %s, row: %d", input, i))
+			return []model.FareInput{}, errors.New("failed to parse distance input")
 		}
 		fareInput := model.FareInput{
 			TimeElapsed: timestamp,
@@ -50,10 +51,12 @@ func (v Validator) ValidateInput(inputs []string) ([]model.FareInput, error) {
 			fareInputs = append(fareInputs, fareInput)
 			continue
 		}
-		if validatePrevious(fareInput, prevFare) {
-			prevFare = fareInput
-			fareInputs = append(fareInputs, fareInput)
+		err := validatePrevious(fareInput, prevFare)
+		if err != nil {
+			return []model.FareInput{}, err
 		}
+		prevFare = fareInput
+		fareInputs = append(fareInputs, fareInput)
 
 	}
 	return fareInputs, nil
@@ -65,7 +68,7 @@ func validateTimestamp(timestamp string) (time.Time, bool) {
 
 	time, err := time.Parse(layout, timestamp)
 	if err != nil {
-		logrus.Info("invalid timestamp: %s", timestamp)
+		logrus.Info("invalid timestamp:", timestamp)
 		return time, false
 	}
 	return time, true
@@ -75,22 +78,26 @@ func validateTimestamp(timestamp string) (time.Time, bool) {
 func validateDistance(distance string) (float64, bool) {
 	value, err := strconv.ParseFloat(strings.TrimSuffix(distance, "\n"), 64)
 	if err != nil {
-		logrus.Info("invalid distance: %s", distance, err)
+		logrus.Info("invalid distance: ", distance, err)
 		return 0, false
 	}
 	return value, true
 
 }
 
-func validatePrevious(currentFare model.FareInput, prevFare model.FareInput) bool {
+func validatePrevious(currentFare model.FareInput, prevFare model.FareInput) error {
 	currentTime := currentFare.GetTimeElapsed()
 	prevTime := prevFare.GetTimeElapsed()
 
 	if currentTime.Before(prevTime) {
-		return false
+		return errors.New("past Time Already Sent")
 	}
 	if currentFare.Distance == 0 {
-		return false
+		return errors.New("distance shouldnt equal to 0")
 	}
-	return prevTime.Add(time.Minute * 5).After(currentTime)
+	if !prevTime.Add(time.Minute * 5).After(currentTime) {
+		return errors.New("time differences greater than 5 minutes")
+	}
+	return nil
+
 }
